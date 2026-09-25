@@ -44,3 +44,8 @@ Security Advisor의 오류·경고는 없으며, 사용량 테이블에 직접 �
 브이로그·일상 스키마/저장 형식 및 기존 프로젝트 기본값 호환을 확인했습니다.
 DeepSeek 요청 형식, 키 미설정 시 호출 차단, 미완성·빈 응답 거부, 사용량 오류 처리를 모의 응답으로 확인했습니다.
 실제 DeepSeek 호출 및 중국어 품질 평가는 운영 키 연결 전이므로 미검증입니다.
+
+
+## Xiaohongshu editorial strategy update
+
+Chinese generation and block rewriting now receive explicit relevance-based keyword, reader-intent, differentiated hook, useful takeaway and contextual claim-review instructions. No live keyword volume/trend feed or ranking guarantee is provided. Personal stories must not be forced into shopping/checklist content. The visible expression checker remains six deterministic pattern categories, not comprehensive moderation or legal clearance. Prompt changes require qualitative live-output evaluation; type checks do not establish audience performance.
