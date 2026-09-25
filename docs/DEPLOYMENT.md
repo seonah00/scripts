@@ -31,7 +31,9 @@ Railway에서 도메인을 생성하고, 환경변수를 다음과 같이 설정
 | SUPABASE_URL | 전용 Supabase 프로젝트 URL |
 | SUPABASE_PUBLISHABLE_KEY | 같은 프로젝트의 publishable key |
 | SUPABASE_SECRET_KEY | 같은 프로젝트의 서버 전용 secret key 또는 service_role key |
-| OPENAI_API_KEY | 운영자 OpenAI API 키 |
+| OPENAI_API_KEY | 틱톡 영어 생성·제품/매장 자동 조사용 OpenAI API 키 |
+| DEEPSEEK_API_KEY | 샤오홍슈 중국어 생성·부분 수정용 DeepSeek API 키 |
+| DEEPSEEK_MODEL | 기본값 deepseek-flash (선택 설정) |
 | OPENAI_MODEL | 선택 모델. 기본값 gpt-4.1 |
 
 비밀값은 Railway Variables에 입력하고 GitHub·브라우저·문서에 넣지 않습니다.
@@ -99,3 +101,14 @@ DB 백업·요금·도메인·발신메일은 운영자 소유 계정에서 설�
 GitHub Actions는 타입 검사, RLS 테스트, 빌드, 익명 접근/CSRF HTTP 테스트를 수행합니다.
 Supabase 스키마 변경은 별도 검토 후 마이그레이션으로 관리하고 최초 bootstrap을 반복 실행하지 않습니다.
 AI 사용량 예약은 원자적이며 실패한 AI 요청도 한도에 포함됩니다. 무제한 재시도로 비용이 발생하는 것을 막기 위한 설정입니다.
+
+## 브이로그·일상 및 현지화 업데이트
+
+기존 JSON 프로젝트는 새 입력 필드의 기본값을 적용해 열 수 있습니다. DB 스키마 변경은 필요 없습니다.
+브이로그·일상은 외부 자동 조사를 하지 않고 본인이 입력한 경험/계획을 확인한 후 생성합니다.
+샤오홍슈 제목·훅·장면·본문과 한국어 의미를 DeepSeek가 함께 작성하며, 부분 수정에도 같은 모델을 사용합니다.
+DeepSeek 키가 없으면 샤오홍슈 AI 생성 버튼이 비활성화됩니다. 다른 모델로 자동 대체하지 않습니다.
+틱톡은 기존 OpenAI 키를 유지합니다. 두 언어 모두 억지 유행어, 검증되지 않은 트렌드 주장, 경험 날조를 금지하는 작성 지침을 적용합니다.
+실시간 인기 표현 수집 기능은 포함하지 않습니다. 실제 현지어 품질과 계정의 말투는 키 연결 후 생성 결과로 확인합니다.
+DeepSeek 요청은 사용자 확인 정보·기획 입력·크리에이터 프로필을 포함하며 서버 비밀키로 전송합니다.
+공식 API: https://api-docs.deepseek.com/api/create-chat-completion/

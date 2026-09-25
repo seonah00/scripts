@@ -2,9 +2,9 @@ import { z } from 'zod';
 export const profileSchema=z.object({name:z.string().max(80),niche:z.string().max(80),tone:z.string().max(80),audience:z.string().max(200),face:z.string().max(80)});
 export type Profile=z.infer<typeof profileSchema>;
 export const defaultProfile:Profile={name:'나의 크리에이터',niche:'뷰티 · 스킨케어',tone:'차분하고 솔직하게',audience:'한국 제품이 궁금한 중국어권 20–30대',face:'제품과 손만 촬영'};
-export const briefSchema=z.object({name:z.string().min(1).max(150),url:z.string().max(1500),category:z.enum(['beauty','place','other']),platform:z.enum(['red','tiktok']),format:z.enum(['cards','video']),experience:z.enum(['none','used']),relationship:z.enum(['self','gift','paid','affiliate','none']),notes:z.string().max(4000),length:z.string().max(30),profile:profileSchema});
+export const briefSchema=z.object({name:z.string().min(1).max(150),url:z.string().max(1500),category:z.enum(['beauty','place','other','vlog','daily']),platform:z.enum(['red','tiktok']),format:z.enum(['cards','video']),experience:z.enum(['none','used']),relationship:z.enum(['self','gift','paid','affiliate','none']),notes:z.string().max(4000),scenes:z.string().max(4000).default(''),shootingStage:z.enum(['planned','filmed']).default('planned'),mood:z.enum(['plain','warm','funny','informative']).default('plain'),length:z.string().max(30),profile:profileSchema});
 export type Brief=z.infer<typeof briefSchema>;
-export const emptyBrief:Brief={name:'',url:'',category:'beauty',platform:'red',format:'cards',experience:'none',relationship:'none',notes:'',length:'6장',profile:defaultProfile};
+export const emptyBrief:Brief={name:'',url:'',category:'beauty',platform:'red',format:'cards',experience:'none',relationship:'none',notes:'',scenes:'',shootingStage:'planned',mood:'plain',length:'6장',profile:defaultProfile};
 export const factSchema=z.object({id:z.string().max(80),text:z.string().min(1).max(2000),source:z.string().max(1500),kind:z.enum(['official','review','experience','manual']),confirmed:z.boolean(),checkedAt:z.string().max(50)});
 export type Fact=z.infer<typeof factSchema>;
 export const blockSchema=z.object({id:z.string().max(80),label:z.string().max(100),text:z.string().max(4000),korean:z.string().max(4000),direction:z.string().max(2000)});
@@ -27,3 +27,11 @@ export function reviewText(text:string):Finding[]{const out:Finding[]=[];for(con
 export function resultText(r:Result){return [r.title,...r.hooks.map(h=>h.text),...r.blocks.map(b=>b.text),r.caption,r.hashtags.join(' ')].join('\n\n');}
 export const demoBrief:Brief={...emptyBrief,name:'모닝듀 수분 세럼',notes:'가상의 제품으로 보는 기획 예시입니다. 실사용 후기가 아닌 구매 전 체크리스트를 만들고 싶어요.'};
 export function makeDemo(platform:'red'|'tiktok',format:'cards'|'video',concept:number):Result{const zh=platform==='red';const text=zh?['保湿精华怎么选？先看这3点','先确认你需要什么','成分表，值得多看一眼','质地，要亲自感受','购买之前再确认','把清单留给下次选购']:['Before you pick a hydrating serum…','Start with your routine','Take a closer look at the ingredients','Texture is personal','Check before you buy','Your simple shopping checklist'];const ko=['수분 세럼을 고르기 전 확인할 3가지','내 루틴에 필요한 것이 무엇인지 먼저 확인해요','성분표와 제품 설명을 살펴봐요','제형과 사용감은 직접 확인해요','용량·가격·판매처를 구매 전에 확인해요','다음 구매 때 참고할 체크리스트'];const dirs=['제품 패키지와 제목을 함께 배치해요.','현재 사용하는 제품을 정리한 장면을 보여줘요.','패키지의 성분표를 확대해 촬영해요.','직접 촬영한 제형 영상이 있을 때만 사용해요.','확인된 제품 정보만 간결하게 배치해요.','세 가지 확인 항목을 한 화면에 정리해요.'];return {title:text[concept===1?5:0],hooks:[{text:text[0],korean:ko[0]},{text:zh?'选精华，先别急着跟风':'A serum checklist, without the hype',korean:'유행을 따르기 전에 확인해요'},{text:zh?'适不适合你？从这几步开始':'Is it right for your routine?',korean:'나에게 맞는지 확인하는 순서'}],blocks:text.map((t,i)=>({id:`demo-${i}`,label:format==='cards'?`${String(i+1).padStart(2,'0')} · ${i===0?'커버':i===5?'마무리':'내용'}`:`${i*5}–${(i+1)*5}초`,text:t,korean:ko[i],direction:dirs[i]})),caption:zh?'挑选护肤品时，先了解自己的需求，再查看产品信息。肤质与使用感因人而异，购买前请核对成分、规格与价格。':'Start with your needs, then review the product details. Skin and texture preferences vary. Check ingredients, size and price before buying.',captionKorean:'내 필요를 먼저 확인하고 제품 정보를 살펴보세요. 피부와 선호하는 사용감은 사람마다 다르므로 성분·용량·가격을 구매 전에 확인해요.',hashtags:zh?['#护肤思路','#保湿精华','#护肤清单']:['#SkincareRoutine','#Serum','#SkincareTips']};}
+
+export function isPersonal(category:Brief['category']){return category==='vlog'||category==='daily';}
+export const personalConcepts=[
+ {title:'하루의 흐름을 따라가는 브이로그',tag:'DAY IN MY LIFE',description:'실제 일어난 일을 시간 흐름에 맞춰 자연스럽게 연결해요.',hook:'작은 장면이 모여 하나의 하루로'},
+ {title:'나만 그런가 싶은 공감형',tag:'RELATABLE MOMENT',description:'실제로 느낀 감정과 일상의 작은 순간에 집중해요.',hook:'친구에게 이야기하듯 편안하게'},
+ {title:'취향과 분위기를 담는 기록형',tag:'LITTLE MOMENTS',description:'빛·소리·공간과 나의 취향을 담백하게 보여줘요.',hook:'과장 없이 오래 남는 장면'}
+];
+export function getConcepts(category:Brief['category']){return isPersonal(category)?personalConcepts:concepts;}

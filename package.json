@@ -11,7 +11,8 @@
     "start": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "test:security": "node scripts/security-test.mjs",
-    "test:http": "node scripts/http-test.mjs"
+    "test:http": "node scripts/http-test.mjs",
+    "test:language": "node --experimental-strip-types scripts/language-test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
