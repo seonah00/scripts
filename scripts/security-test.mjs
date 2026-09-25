@@ -1,0 +1,34 @@
+import {PGlite} from '@electric-sql/pglite';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const db=new PGlite();
+await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;`);
+await db.exec(await readFile(new URL('../database/bootstrap.sql',import.meta.url),'utf8'));
+const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222',p='33333333-3333-4333-8333-333333333333';
+await db.query('insert into auth.users values($1,$2),($3,$4)',[a,'a@example.test',b,'b@example.test']);
+assert.equal((await db.query('select status from gv_members where id=$1',[a])).rows[0].status,'pending');
+async function asUser(id){await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');}
+async function denied(sql,args=[]){await assert.rejects(db.query(sql,args));}
+await asUser(a);
+await denied('insert into gv_projects values($1,$2,$3,$4,now())',[p,a,'blocked','{}']);
+await denied("update gv_members set status='active',role='admin' where id=$1",[a]);
+await denied('select gv_reserve_usage($1)',[a]);
+await db.exec('reset role');await db.exec("update gv_members set status='active'");await asUser(a);
+await db.query('insert into gv_projects values($1,$2,$3,$4,now())',[p,a,'my project','{}']);
+await db.query('insert into gv_profiles values($1,$2)',[a,'{"tone":"mine"}']);
+assert.equal((await db.query('select * from gv_projects')).rows.length,1);
+await asUser(b);
+assert.equal((await db.query('select * from gv_projects')).rows.length,0);
+assert.equal((await db.query('select * from gv_profiles')).rows.length,0);
+await denied('insert into gv_projects values($1,$2,$3,$4,now())',[p,a,'forged','{}']);
+assert.equal((await db.query("update gv_projects set name='stolen' where owner=$1 returning *",[a])).rows.length,0);
+await asUser(a);await denied('update gv_projects set owner=$1 where owner=$2',[b,a]);
+await db.exec('reset role');await db.query("update gv_members set status='suspended' where id=$1",[a]);await asUser(a);
+assert.equal((await db.query('select * from gv_projects')).rows.length,0);
+await denied('insert into gv_profiles values($1,$2) on conflict(owner) do update set payload=excluded.payload',[a,'{}']);
+await db.exec('reset role');await db.exec('set role service_role');
+assert.equal((await db.query('select gv_reserve_usage($1) as ok',[a])).rows[0].ok,false);
+for(let i=0;i<30;i++)assert.equal((await db.query('select gv_reserve_usage($1) as ok',[b])).rows[0].ok,true);
+assert.equal((await db.query('select gv_reserve_usage($1) as ok',[b])).rows[0].ok,false);
+await db.exec('reset role');await db.exec('set role anon');await denied('select * from gv_projects');await denied('select * from gv_members');
+await db.close();console.log('PASS: signup defaults, pending/suspended denial, owner isolation, ownership transfer denial, role escalation denial, anonymous denial, server-only atomic quota (30/day).');

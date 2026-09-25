@@ -1,0 +1,6 @@
+import {z} from 'zod';
+import {actor,payload,errorResponse,AppError} from '@/lib/server';
+import {adminClient} from '@/lib/supabase/server';
+async function admin(req?:Request){const id=await actor(req);if(id.member?.role!=='admin')throw new AppError('운영자만 접근할 수 있습니다.',403);return id;}
+export async function GET(req:Request){try{await admin();const page=Math.max(0,Math.min(10000,Number(new URL(req.url).searchParams.get('page'))||0));const {data,error,count}=await adminClient().from('gv_members').select('id,email,status,role,created_at',{count:'exact'}).order('created_at',{ascending:false}).range(page*50,page*50+49);if(error)throw error;return Response.json({members:data,count},{headers:{'Cache-Control':'private, no-store'}});}catch(e){return errorResponse(e);}}
+export async function POST(req:Request){try{const id=await admin(req);const body=z.object({id:z.string().uuid(),status:z.enum(['active','suspended','pending'])}).parse(await payload(req));if(body.id===id.user.id)throw new AppError('자신의 권한은 변경할 수 없습니다.');const {data,error}=await adminClient().from('gv_members').update({status:body.status}).eq('id',body.id).eq('role','student').select('id').maybeSingle();if(error)throw error;if(!data)throw new AppError('수강생을 찾지 못했습니다.',404);return Response.json({ok:true});}catch(e){return errorResponse(e);}}
