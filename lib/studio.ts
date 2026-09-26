@@ -2,14 +2,16 @@ import { z } from 'zod';
 export const profileSchema=z.object({name:z.string().max(80),niche:z.string().max(80),tone:z.string().max(80),audience:z.string().max(200),face:z.string().max(80)});
 export type Profile=z.infer<typeof profileSchema>;
 export const defaultProfile:Profile={name:'나의 크리에이터',niche:'뷰티 · 스킨케어',tone:'차분하고 솔직하게',audience:'한국 제품이 궁금한 중국어권 20–30대',face:'제품과 손만 촬영'};
-export const briefSchema=z.object({name:z.string().min(1).max(150),url:z.string().max(1500),category:z.enum(['beauty','place','other','vlog','daily']),platform:z.enum(['red','tiktok']),format:z.enum(['cards','video']),experience:z.enum(['none','used']),relationship:z.enum(['self','gift','paid','affiliate','none']),notes:z.string().max(4000),scenes:z.string().max(4000).default(''),shootingStage:z.enum(['planned','filmed']).default('planned'),mood:z.enum(['plain','warm','funny','informative']).default('plain'),length:z.string().max(30),profile:profileSchema});
+export const itemSchema=z.object({id:z.string().min(1).max(80),name:z.string().min(1).max(150),url:z.string().max(1500).refine(v=>!v||/^https?:\/\//.test(v),'http(s) 링크를 입력해 주세요.'),experience:z.enum(['none','used']),review:z.string().max(2000),variant:z.string().max(150),relationship:z.enum(['none','self','gift','paid','affiliate']).default('none')});
+export type ContentItem=z.infer<typeof itemSchema>;
+export const briefSchema=z.object({mode:z.enum(['single','collection','comparison','routine']).default('single'),items:z.array(itemSchema).max(4).default([]),criteria:z.string().max(500).default(''),name:z.string().min(1).max(150),url:z.string().max(1500),category:z.enum(['beauty','place','other','vlog','daily']),platform:z.enum(['red','tiktok']),format:z.enum(['cards','video']),experience:z.enum(['none','used']),relationship:z.enum(['self','gift','paid','affiliate','none']),notes:z.string().max(4000),scenes:z.string().max(4000).default(''),shootingStage:z.enum(['planned','filmed']).default('planned'),mood:z.enum(['plain','warm','funny','informative']).default('plain'),length:z.string().max(30),profile:profileSchema});
 export type Brief=z.infer<typeof briefSchema>;
-export const emptyBrief:Brief={name:'',url:'',category:'beauty',platform:'red',format:'cards',experience:'none',relationship:'none',notes:'',scenes:'',shootingStage:'planned',mood:'plain',length:'6장',profile:defaultProfile};
-export const factSchema=z.object({id:z.string().max(80),text:z.string().min(1).max(2000),source:z.string().max(1500),kind:z.enum(['official','review','experience','manual']),confirmed:z.boolean(),checkedAt:z.string().max(50)});
+export const emptyBrief:Brief={mode:'single',items:[],criteria:'',name:'',url:'',category:'beauty',platform:'red',format:'cards',experience:'none',relationship:'none',notes:'',scenes:'',shootingStage:'planned',mood:'plain',length:'6장',profile:defaultProfile};
+export const factSchema=z.object({itemId:z.string().max(80).default(''),id:z.string().max(80),text:z.string().min(1).max(2000),source:z.string().max(1500),kind:z.enum(['official','review','experience','manual']),confirmed:z.boolean(),checkedAt:z.string().max(50)});
 export type Fact=z.infer<typeof factSchema>;
 export const blockSchema=z.object({id:z.string().max(80),label:z.string().max(100),text:z.string().max(4000),korean:z.string().max(4000),direction:z.string().max(2000)});
 export type Block=z.infer<typeof blockSchema>;
-export const resultSchema=z.object({title:z.string().max(500),hooks:z.array(z.object({text:z.string().max(1000),korean:z.string().max(1000)})).min(1).max(3),blocks:z.array(blockSchema).min(1).max(12),caption:z.string().max(6000),captionKorean:z.string().max(6000),hashtags:z.array(z.string().max(100)).max(8)});
+export const resultSchema=z.object({thumbnail:z.string().max(200).default(''),thumbnailKorean:z.string().max(500).default(''),keywords:z.array(z.string().max(100)).max(5).default([]),reviewNotes:z.array(z.string().max(500)).max(10).default([]),title:z.string().max(500),hooks:z.array(z.object({text:z.string().max(1000),korean:z.string().max(1000)})).min(1).max(3),blocks:z.array(blockSchema).min(1).max(12),caption:z.string().max(6000),captionKorean:z.string().max(6000),hashtags:z.array(z.string().max(100)).max(8)});
 export type Result=z.infer<typeof resultSchema>;
 export const projectSchema=z.object({id:z.string().uuid(),brief:briefSchema,facts:z.array(factSchema).max(30),result:resultSchema.nullable(),concept:z.number().int().min(0).max(2),demo:z.boolean(),updatedAt:z.string().max(50)});
 export type Project=z.infer<typeof projectSchema>;
@@ -24,9 +26,9 @@ const rules:{regex:RegExp;category:string;reason:string;suggestion:string;level:
  {regex:/马上抢|最后机会|품절\s*임박|before it sells out/gi,category:'긴급성·희소성',reason:'현재 재고·판매 기간에 대한 확인 없이 긴급성을 단정하지 마세요.',suggestion:'购买前请确认库存',level:'context'}
 ];
 export function reviewText(text:string):Finding[]{const out:Finding[]=[];for(const [ri,r] of rules.entries()){for(const m of text.matchAll(new RegExp(r.regex.source,r.regex.flags))){const start=m.index??0;const lang=/[가-힣]/.test(m[0])?'ko':/[一-龥]/.test(m[0])?'zh':'en';const fallback=lang==='ko'?['개인에 따라 다를 수 있어요','살펴볼 만한','일상적인 관리','제품 정보를 확인해 주세요','구매 전 확인한 정보','구매 전 재고를 확인해 주세요'][ri]:lang==='en'?['Results may vary','worth exploring','daily care','Check the product information','A closer look','Check availability before purchasing'][ri]:r.suggestion;out.push({id:`${ri}-${start}`,term:m[0],start,end:start+m[0].length,category:r.category,reason:r.reason,suggestion:fallback,level:r.level});}}return out.sort((a,b)=>a.start-b.start);}
-export function resultText(r:Result){return [r.title,...r.hooks.map(h=>h.text),...r.blocks.map(b=>b.text),r.caption,r.hashtags.join(' ')].join('\n\n');}
+export function resultText(r:Result){return [r.title,r.thumbnail,...r.hooks.map(h=>h.text),...r.blocks.map(b=>b.text),r.caption,r.hashtags.join(' ')].join('\n\n');}
 export const demoBrief:Brief={...emptyBrief,name:'모닝듀 수분 세럼',notes:'가상의 제품으로 보는 기획 예시입니다. 실사용 후기가 아닌 구매 전 체크리스트를 만들고 싶어요.'};
-export function makeDemo(platform:'red'|'tiktok',format:'cards'|'video',concept:number):Result{const zh=platform==='red';const text=zh?['保湿精华怎么选？先看这3点','先确认你需要什么','成分表，值得多看一眼','质地，要亲自感受','购买之前再确认','把清单留给下次选购']:['Before you pick a hydrating serum…','Start with your routine','Take a closer look at the ingredients','Texture is personal','Check before you buy','Your simple shopping checklist'];const ko=['수분 세럼을 고르기 전 확인할 3가지','내 루틴에 필요한 것이 무엇인지 먼저 확인해요','성분표와 제품 설명을 살펴봐요','제형과 사용감은 직접 확인해요','용량·가격·판매처를 구매 전에 확인해요','다음 구매 때 참고할 체크리스트'];const dirs=['제품 패키지와 제목을 함께 배치해요.','현재 사용하는 제품을 정리한 장면을 보여줘요.','패키지의 성분표를 확대해 촬영해요.','직접 촬영한 제형 영상이 있을 때만 사용해요.','확인된 제품 정보만 간결하게 배치해요.','세 가지 확인 항목을 한 화면에 정리해요.'];return {title:text[concept===1?5:0],hooks:[{text:text[0],korean:ko[0]},{text:zh?'选精华，先别急着跟风':'A serum checklist, without the hype',korean:'유행을 따르기 전에 확인해요'},{text:zh?'适不适合你？从这几步开始':'Is it right for your routine?',korean:'나에게 맞는지 확인하는 순서'}],blocks:text.map((t,i)=>({id:`demo-${i}`,label:format==='cards'?`${String(i+1).padStart(2,'0')} · ${i===0?'커버':i===5?'마무리':'내용'}`:`${i*5}–${(i+1)*5}초`,text:t,korean:ko[i],direction:dirs[i]})),caption:zh?'挑选护肤品时，先了解自己的需求，再查看产品信息。肤质与使用感因人而异，购买前请核对成分、规格与价格。':'Start with your needs, then review the product details. Skin and texture preferences vary. Check ingredients, size and price before buying.',captionKorean:'내 필요를 먼저 확인하고 제품 정보를 살펴보세요. 피부와 선호하는 사용감은 사람마다 다르므로 성분·용량·가격을 구매 전에 확인해요.',hashtags:zh?['#护肤思路','#保湿精华','#护肤清单']:['#SkincareRoutine','#Serum','#SkincareTips']};}
+export function makeDemo(platform:'red'|'tiktok',format:'cards'|'video',concept:number):Result{const zh=platform==='red';const text=zh?['保湿精华怎么选？先看这3点','先确认你需要什么','成分表，值得多看一眼','质地，要亲自感受','购买之前再确认','把清单留给下次选购']:['Before you pick a hydrating serum…','Start with your routine','Take a closer look at the ingredients','Texture is personal','Check before you buy','Your simple shopping checklist'];const ko=['수분 세럼을 고르기 전 확인할 3가지','내 루틴에 필요한 것이 무엇인지 먼저 확인해요','성분표와 제품 설명을 살펴봐요','제형과 사용감은 직접 확인해요','용량·가격·판매처를 구매 전에 확인해요','다음 구매 때 참고할 체크리스트'];const dirs=['제품 패키지와 제목을 함께 배치해요.','현재 사용하는 제품을 정리한 장면을 보여줘요.','패키지의 성분표를 확대해 촬영해요.','직접 촬영한 제형 영상이 있을 때만 사용해요.','확인된 제품 정보만 간결하게 배치해요.','세 가지 확인 항목을 한 화면에 정리해요.'];return {thumbnail:'',thumbnailKorean:'',keywords:[],reviewNotes:[],title:text[concept===1?5:0],hooks:[{text:text[0],korean:ko[0]},{text:zh?'选精华，先别急着跟风':'A serum checklist, without the hype',korean:'유행을 따르기 전에 확인해요'},{text:zh?'适不适合你？从这几步开始':'Is it right for your routine?',korean:'나에게 맞는지 확인하는 순서'}],blocks:text.map((t,i)=>({id:`demo-${i}`,label:format==='cards'?`${String(i+1).padStart(2,'0')} · ${i===0?'커버':i===5?'마무리':'내용'}`:`${i*5}–${(i+1)*5}초`,text:t,korean:ko[i],direction:dirs[i]})),caption:zh?'挑选护肤品时，先了解自己的需求，再查看产品信息。肤质与使用感因人而异，购买前请核对成分、规格与价格。':'Start with your needs, then review the product details. Skin and texture preferences vary. Check ingredients, size and price before buying.',captionKorean:'내 필요를 먼저 확인하고 제품 정보를 살펴보세요. 피부와 선호하는 사용감은 사람마다 다르므로 성분·용량·가격을 구매 전에 확인해요.',hashtags:zh?['#护肤思路','#保湿精华','#护肤清单']:['#SkincareRoutine','#Serum','#SkincareTips']};}
 
 export function isPersonal(category:Brief['category']){return category==='vlog'||category==='daily';}
 export const personalConcepts=[
@@ -35,3 +37,20 @@ export const personalConcepts=[
  {title:'취향과 분위기를 담는 기록형',tag:'LITTLE MOMENTS',description:'빛·소리·공간과 나의 취향을 담백하게 보여줘요.',hook:'과장 없이 오래 남는 장면'}
 ];
 export function getConcepts(category:Brief['category']){return isPersonal(category)?personalConcepts:concepts;}
+
+export function eligibleFacts(brief:Brief,facts:Fact[]){
+ const multi=brief.mode!=='single';
+ return facts.filter(f=>{if(!f.confirmed)return false;if(!multi)return !f.itemId&&(f.kind!=='experience'||brief.experience==='used');const item=brief.items.find(i=>i.id===f.itemId);return !!item&&(f.kind!=='experience'||item.experience==='used');});
+}
+export function validateItems(brief:Brief){
+ if(brief.mode==='single')return;
+ if(isPersonal(brief.category))throw new Error('브이로그·일상은 단일 이야기 모드를 사용해 주세요.');
+ if(brief.items.length<2||brief.items.length>4)throw new Error('제품·장소를 2~4개 입력해 주세요.');
+ if(new Set(brief.items.map(i=>i.id)).size!==brief.items.length)throw new Error('항목 식별자가 중복되었습니다.');
+}
+
+export function validateReviewedResult(original:Result,next:Result){
+ if(!next.thumbnail.trim()||!next.thumbnailKorean.trim())throw new Error('썸네일 문구와 한국어 의미가 필요합니다.');
+ if(next.hooks.length!==original.hooks.length||next.blocks.length!==original.blocks.length||new Set(next.blocks.map(b=>b.id)).size!==next.blocks.length||next.blocks.some((b,i)=>b.id!==original.blocks[i].id||b.label!==original.blocks[i].label))throw new Error('검수 중 장면 구성이 변경되었습니다.');
+ return next;
+}

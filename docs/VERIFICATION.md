@@ -49,3 +49,16 @@ DeepSeek 요청 형식, 키 미설정 시 호출 차단, 미완성·빈 응답 �
 ## Xiaohongshu editorial strategy update
 
 Chinese generation and block rewriting now receive explicit relevance-based keyword, reader-intent, differentiated hook, useful takeaway and contextual claim-review instructions. No live keyword volume/trend feed or ranking guarantee is provided. Personal stories must not be forced into shopping/checklist content. The visible expression checker remains six deterministic pattern categories, not comprehensive moderation or legal clearance. Prompt changes require qualitative live-output evaluation; type checks do not establish audience performance.
+
+
+## 0.3.0 구현 및 검증 범위 (2026-09-26)
+
+- 여러 항목 2~4개 소개 / 비교 / 루틴. 제품별 URL, 변형/지점, 실제 후기, 관계를 저장합니다.
+- 항목별 조사 결과에 itemId를 서버에서 부여합니다. 확인되지 않은 사실, 삭제된 항목의 사실, 미사용 항목의 경험을 생성에서 제외합니다.
+- 항목별 확인 사실이 없으면 생성을 차단합니다. 사용 후기 입력은 확인 전 경험 카드로 옮깁니다.
+- 발행 제목/썸네일/한국어 의미/관련 키워드 분리. 기존 프로젝트에 기본값 적용.
+- 생성 후 같은 언어 제공자로 근거/번역을 다시 검토합니다. 전체 검수·수정과 되돌리기를 제공합니다. 단어 검사와 달리 AI 검수는 비용과 시간이 추가되며 완전한 사실 검증이 아닙니다.
+- 검수 결과의 장면 ID·수·라벨 변화와 썸네일 누락을 거부합니다. 수정 오류 시 현재 결과는 유지됩니다.
+- 규칙 검사는 기존 6개 유형이며 공식 금지어 판정이 아닙니다.
+- 실제 DeepSeek 생성과 관리자 로그인은 이전 운영 테스트에서 확인했습니다. 기존 생성에서 추가 주장/한국어 혼입/해설 혼입을 발견했습니다. 이번 검수 변경은 그 문제를 줄이기 위한 것으로, 새 버전의 실제 AI 품질 검증은 별도 필요합니다.
+- 일반 수강생 승인·복원·비밀번호 재설정의 운영 E2E, 실제 OpenAI 영어/조사 결과 및 모바일 검증은 아직 별도 확인이 필요합니다.

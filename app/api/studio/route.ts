@@ -1,6 +1,6 @@
 import {actor,errorResponse,payload,AppError,runtime,reserveUsage} from '@/lib/server';
-import {profileSchema,projectSchema,briefSchema,isPersonal} from '@/lib/studio';
-import {research,generate,rewrite} from '@/lib/ai';
+import {profileSchema,projectSchema,briefSchema,isPersonal,validateItems} from '@/lib/studio';
+import {research,generate,rewrite,review} from '@/lib/ai';
 export const dynamic='force-dynamic';
 export async function GET(){try{
  const {client,user}=await actor();
@@ -16,14 +16,15 @@ export async function POST(req:Request){try{
  const {error}=await client.from('gv_projects').upsert({id:p.id,owner:user.id,name:p.brief.name,payload:p,updated_at:p.updatedAt},{onConflict:'owner,id'});
  if(error)throw new AppError('프로젝트를 저장하지 못했습니다.',503);return Response.json({project:p});}
  if(body.action==='profile'){const p=profileSchema.parse(body.profile);const {error}=await client.from('gv_profiles').upsert({owner:user.id,payload:p});if(error)throw new AppError('프로필을 저장하지 못했습니다.',503);return Response.json({profile:p});}
- if(!['research','generate','rewrite'].includes(body.action))throw new AppError('지원하지 않는 요청입니다.');
- const brief=briefSchema.parse(body.brief);
+ if(!['research','generate','rewrite','review'].includes(body.action))throw new AppError('지원하지 않는 요청입니다.');
+ const brief=briefSchema.parse(body.brief);try{validateItems(brief);}catch(e){throw new AppError((e as Error).message);}if(brief.platform==='tiktok'&&brief.format!=='video')throw new AppError('틱톡은 영상 형식을 사용해 주세요.');
  if(body.action==='research'&&isPersonal(brief.category))throw new AppError('브이로그·일상은 본인의 이야기와 촬영 계획을 직접 입력해 주세요.');
  const useDeepseek=body.action!=='research'&&brief.platform==='red';
  if(!(useDeepseek?runtime().DEEPSEEK_API_KEY:runtime().OPENAI_API_KEY))throw new AppError(useDeepseek?'샤오홍슈 중국어 생성에는 DeepSeek 연결이 필요합니다.':'영어 생성·자동 조사에는 OpenAI 연결이 필요합니다.',503);
  if(isPersonal(brief.category)&&brief.shootingStage==='filmed'&&!brief.scenes.trim())throw new AppError('촬영해 둔 장면을 입력해 주세요.');
  await reserveUsage(user.id);
- if(body.action==='research')return Response.json({facts:await research(body.brief)});
+ if(body.action==='research')return Response.json({facts:await research(body.brief,typeof body.itemId==='string'?body.itemId:'')});
+ if(body.action==='review')return Response.json({result:await review(body)});
  if(body.action==='generate')return Response.json({result:await generate(body)});
  return Response.json({block:await rewrite(body)});
  }catch(e){return errorResponse(e);}}
