@@ -1,3 +1,4 @@
+import {structuredFormat} from '../lib/openai-format.ts';
 import {openAIError} from '../lib/provider-error.ts';
 import assert from 'node:assert/strict';
 import {deepseekJSON,languageInstructions} from '../lib/language.ts';
@@ -42,3 +43,20 @@ assert.throws(()=>validateReviewedResult(original,{...corrected,blocks:corrected
 console.log('PASS: editorial correction retains block identity/count and requires separate thumbnail translation.');
 
 const providerErr=openAIError(400,{error:{type:'invalid_request_error',param:'text.format',message:'private-user-text secret-key unsupported option'}});assert.match(providerErr,/HTTP 400/);assert.match(providerErr,/text.format/);assert.doesNotMatch(providerErr,/private-user-text|secret-key/);assert.doesNotMatch(openAIError(500,{error:{code:'secret-key',param:'private-user-text'}}),/secret-key|private-user-text/);console.log('PASS: provider diagnostics disclose only status and allowlisted metadata.');
+
+const format=structuredFormat(resultSchema);
+assert.equal(format.type,'json_schema');
+assert.equal(format.strict,true);
+function checkObjectSchema(node){
+ if(!node||typeof node!=='object')return;
+ assert.equal('default' in node,false);
+ if(node.type==='object'){
+  assert.equal(node.additionalProperties,false);
+  assert.deepEqual([...node.required].sort(),Object.keys(node.properties).sort());
+ }
+ Object.values(node).forEach(checkObjectSchema);
+}
+checkObjectSchema(format.schema);
+assert.ok(format.schema.required.includes('thumbnail'));
+assert.equal(format.schema.properties.blocks.maxItems,12);
+console.log('PASS: strict OpenAI output requires all fields including legacy-default fields and rejects extra keys at every object level.');
