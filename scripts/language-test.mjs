@@ -1,3 +1,4 @@
+import {openAIError} from '../lib/provider-error.ts';
 import assert from 'node:assert/strict';
 import {deepseekJSON,languageInstructions} from '../lib/language.ts';
 import {briefSchema,emptyBrief,projectSchema,getConcepts,eligibleFacts,validateItems,factSchema,resultSchema,makeDemo,validateReviewedResult} from '../lib/studio.ts';
@@ -39,3 +40,5 @@ assert.throws(()=>validateReviewedResult(original,{...corrected,blocks:corrected
 assert.throws(()=>validateReviewedResult(original,{...corrected,thumbnail:''}));
 assert.throws(()=>validateReviewedResult(original,{...corrected,blocks:corrected.blocks.map((b,i)=>i?b:{...b,id:'changed'})}));
 console.log('PASS: editorial correction retains block identity/count and requires separate thumbnail translation.');
+
+const providerErr=openAIError(400,{error:{type:'invalid_request_error',param:'text.format',message:'private-user-text secret-key unsupported option'}});assert.match(providerErr,/HTTP 400/);assert.match(providerErr,/text.format/);assert.doesNotMatch(providerErr,/private-user-text|secret-key/);assert.doesNotMatch(openAIError(500,{error:{code:'secret-key',param:'private-user-text'}}),/secret-key|private-user-text/);console.log('PASS: provider diagnostics disclose only status and allowlisted metadata.');
