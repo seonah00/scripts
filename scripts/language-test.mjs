@@ -1,3 +1,4 @@
+import {eligibleExpressions,activeExpressions} from '../lib/expressions.ts';
 import {structuredFormat} from '../lib/openai-format.ts';
 import {openAIError} from '../lib/provider-error.ts';
 import assert from 'node:assert/strict';
@@ -60,3 +61,16 @@ checkObjectSchema(format.schema);
 assert.ok(format.schema.required.includes('thumbnail'));
 assert.equal(format.schema.properties.blocks.maxItems,12);
 console.log('PASS: strict OpenAI output requires all fields including legacy-default fields and rejects extra keys at every object level.');
+
+const expressionNow=Date.parse('2026-09-27T00:00:00Z');
+const expressionEntry={phrase:'test phrase',meaning:'검증용',context:'테스트',avoid:'',categories:['daily'],usage:'spoken',evidence:[{url:'https://www.tiktok.com/@example/video/123',date:'2026-09-20',excerpt:'test phrase'},{url:'https://example.com/recent',date:'2026-09-21',excerpt:'test phrase'}]};
+const expressionCitations=expressionEntry.evidence.map(e=>e.url);
+assert.equal(eligibleExpressions({entries:[expressionEntry]},'tiktok',expressionCitations,expressionNow).length,1);
+assert.equal(eligibleExpressions({entries:[expressionEntry]},'red',expressionCitations,expressionNow).length,0);
+assert.equal(eligibleExpressions({entries:[expressionEntry]},'tiktok',expressionCitations.slice(0,1),expressionNow).length,0);
+for(const date of ['2025-01-01','2026-10-01','2026-02-30'])assert.equal(eligibleExpressions({entries:[{...expressionEntry,evidence:expressionEntry.evidence.map(e=>({...e,date}))}]},'tiktok',expressionCitations,expressionNow).length,0);
+assert.equal(eligibleExpressions({entries:[{...expressionEntry,evidence:[expressionEntry.evidence[0],expressionEntry.evidence[0]]}]},'tiktok',expressionCitations,expressionNow).length,0);
+assert.equal(activeExpressions([expressionEntry],'2026-09-20','daily',expressionNow).length,1);
+assert.equal(activeExpressions([expressionEntry],'2026-09-20','beauty',expressionNow).length,0);
+assert.equal(activeExpressions([expressionEntry],'2026-08-01','daily',expressionNow).length,0);
+console.log('PASS: expression source citation matching, platform isolation, dates, duplicate evidence, topic selection and expiry.');
