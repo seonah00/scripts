@@ -10,6 +10,12 @@ export async function GET(){try{
  }catch(e){return errorResponse(e);}}
 export async function POST(req:Request){try{
  const {client,user}=await actor(req);const body=await payload(req);
+ if(body.action==='delete'){
+ const id=projectSchema.shape.id.parse(body.id);
+ const {data,error}=await client.from('gv_projects').delete().eq('owner',user.id).eq('id',id).select('id');
+ if(error)throw new AppError('프로젝트를 삭제하지 못했습니다. 다시 시도해 주세요.',503);
+ if(!data?.length)throw new AppError('프로젝트를 찾을 수 없거나 삭제 권한이 없습니다.',404);
+ return Response.json({id});}
  if(body.action==='save'){
  const p=projectSchema.parse(body.project);p.updatedAt=new Date().toISOString();
  if(p.brief.platform==='tiktok'&&p.brief.format!=='video')throw new AppError('틱톡은 영상 형식으로 저장해 주세요.');

@@ -24,6 +24,7 @@ alter table public.gv_daily_usage enable row level security;
 revoke all on public.gv_members,public.gv_projects,public.gv_profiles,public.gv_daily_usage from anon,authenticated;
 grant select on public.gv_members to authenticated;
 grant select,insert,update on public.gv_projects,public.gv_profiles to authenticated;
+grant delete on public.gv_projects to authenticated;
 grant all on public.gv_members,public.gv_projects,public.gv_profiles,public.gv_daily_usage to service_role;
 create policy gv_members_self on public.gv_members for select to authenticated using(id=(select auth.uid()));
 create policy gv_projects_read on public.gv_projects for select to authenticated using(owner=(select auth.uid()) and exists(select 1 from public.gv_members where id=(select auth.uid()) and status='active'));
@@ -55,3 +56,5 @@ $$;
 revoke all on function public.gv_reserve_usage(uuid) from public,anon,authenticated;
 grant execute on function public.gv_reserve_usage(uuid) to service_role;
 commit;
+
+create policy gv_projects_delete on public.gv_projects for delete to authenticated using(owner=(select auth.uid()) and exists(select 1 from public.gv_members where id=(select auth.uid()) and status='active'));
