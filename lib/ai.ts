@@ -28,7 +28,9 @@ const editorialRules=`For mode collection, introduce each item; comparison compa
 async function reviewGenerated(brief:ReturnType<typeof briefSchema.parse>,facts:ReturnType<typeof factSchema.parse>[],result:ReturnType<typeof resultSchema.parse>){
  const checked=await localized('Act as a second-pass factual and bilingual editor. Return the complete corrected result with EXACT SAME JSON keys and same block IDs/count/labels. Compare every publication claim with confirmed facts and itemId. Remove unsupported claims, experiential claims, CTA, and exaggerated comparisons. Correct inappropriate Korean mixed into Chinese prose, but preserve original brand names where translation is uncertain. Rewrite Korean meanings to match final text exactly; move production commentary to direction. Keep separate title and thumbnail. reviewNotes: up to 10 short Korean notes describing removed claims or remaining missing evidence. Do not claim verified compliance. '+editorialRules,{brief,facts,result},brief.platform);
  const next=parseAIResult(checked.text);
- try{validateReviewedResult(result,next);}catch{throw new AppError('검수 결과 형식을 확인하지 못했습니다. 원본은 유지됩니다. 다시 시도해 주세요.',502);}
+ // Align by stable scene IDs, never by position when a reviewer reorders output.
+ if(next.blocks.length===result.blocks.length&&new Set(next.blocks.map(b=>b.id)).size===result.blocks.length&&result.blocks.every(b=>next.blocks.some(n=>n.id===b.id)))next.blocks=result.blocks.map(b=>({...next.blocks.find(n=>n.id===b.id)!,label:b.label}));
+ try{validateReviewedResult(result,next);}catch{return {...result,reviewNotes:['자동 검수가 장면 구성을 변경해 검수안을 적용하지 않았습니다. 이 초안은 검수 미완료입니다. 전체 AI 검수와 브랜드 요구사항 대조를 실행해 주세요.',...result.reviewNotes].slice(0,10)};}
  return next;
 }
 export async function review(input:unknown){const data=z.object({brief:briefSchema,facts:z.array(factSchema).max(30),result:resultSchema}).parse(input);validateItems(data.brief);return reviewGenerated(data.brief,eligibleFacts(data.brief,data.facts),data.result);}
