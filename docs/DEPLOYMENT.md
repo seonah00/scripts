@@ -46,7 +46,7 @@ Railway에서 도메인을 생성하고, 환경변수를 다음과 같이 설정
 - Email provider를 활성화하고 Confirm email을 켭니다.
 - Site URL을 APP_URL과 같은 실제 HTTPS 주소로 설정합니다.
 - Redirect URLs에 `https://실제주소/auth/confirm`과 `https://실제주소/account/password`를 허용합니다.
-- 비밀번호 최소 길이를 12자로 설정합니다. 익명 로그인을 사용하지 않습니다.
+- 비밀번호 최소 길이를 6자로 설정합니다. 익명 로그인을 사용하지 않습니다.
 - 수강생에게 인증 메일을 보내려면 발신 도메인 인증과 운영용 SMTP를 설정합니다.
 - Supabase Auth rate limits 및 이메일 발송 한도를 수강생 규모에 맞게 설정합니다.
 
