@@ -95,3 +95,11 @@ try{
  await assert.rejects(deepseekJSON('test',{}, {key:'test'},resultSchema),e=>e.status===502);assert.equal(attempts,1);
 }finally{globalThis.fetch=fetchOriginal;}
 console.log('PASS: malformed Chinese output repaired once; persistent invalid output rejected; authentication failures not retried.');
+
+const {revisionSchema}=await import('../lib/revision.ts');
+const revisionInput={brief:{...emptyBrief,name:'테스트'},facts:[],result:makeDemo('red','cards',0),instruction:'말투를 자연스럽게 바꿔줘',structure:'rebuild'};
+assert.equal(revisionSchema.parse(revisionInput).structure,'rebuild');
+for(const instruction of ['', '  ', 'x'.repeat(2001)])assert.equal(revisionSchema.safeParse({...revisionInput,instruction}).success,false);
+assert.equal(revisionSchema.safeParse({...revisionInput,structure:'unknown'}).success,false);
+assert.equal(revisionSchema.safeParse({...revisionInput,result:{title:'partial'}}).success,false);
+console.log('PASS: full revision rejects blank/oversized requests, unsupported structure modes and incomplete source drafts.');

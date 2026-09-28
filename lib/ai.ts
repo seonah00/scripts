@@ -1,3 +1,4 @@
+import {revisionSchema,revisionRules} from './revision';
 import {expressionContext} from './expression-context';
 import {structuredFormat} from './openai-format';
 import {openAIError} from './provider-error';
@@ -31,3 +32,14 @@ async function reviewGenerated(brief:ReturnType<typeof briefSchema.parse>,facts:
 export async function review(input:unknown){const data=z.object({brief:briefSchema,facts:z.array(factSchema).max(30),result:resultSchema}).parse(input);validateItems(data.brief);return reviewGenerated(data.brief,eligibleFacts(data.brief,data.facts),data.result);}
 
 function parseAIResult(text:string){const checked=resultSchema.safeParse(parsed(text));if(!checked.success)throw new AppError('AI가 반환한 결과 형식이 올바르지 않습니다. 입력은 유지됩니다. 다시 시도해 주세요.',502);return checked.data;}
+
+export async function revise(input:unknown){
+ const data=revisionSchema.parse(input);validateItems(data.brief);
+ const facts=eligibleFacts(data.brief,data.facts);
+ if(!facts.length)throw new AppError('수정에 사용할 확인된 정보가 필요합니다.');
+ const output=await localized(revisionRules(data.structure)+' '+storyRules(data.brief)+' '+editorialRules,{brief:data.brief,confirmedFacts:facts,existingDraft:data.result,revisionRequest:data.instruction},data.brief.platform);
+ const next=parseAIResult(output.text);
+ if(data.structure==='keep'){try{validateReviewedResult(data.result,next);}catch{throw new AppError('수정안의 장면 구성이 달라 적용하지 않았습니다. 원본은 유지됩니다. 전체 흐름 재구성 옵션을 선택하거나 다시 시도해 주세요.',502);}}
+ if(new Set(next.blocks.map(b=>b.id)).size!==next.blocks.length)throw new AppError('수정안의 장면 식별자가 중복되었습니다. 다시 시도해 주세요.',502);
+ return next;
+}
