@@ -74,3 +74,24 @@ assert.equal(activeExpressions([expressionEntry],'2026-09-20','daily',expression
 assert.equal(activeExpressions([expressionEntry],'2026-09-20','beauty',expressionNow).length,0);
 assert.equal(activeExpressions([expressionEntry],'2026-08-01','daily',expressionNow).length,0);
 console.log('PASS: expression source citation matching, platform isolation, dates, duplicate evidence, topic selection and expiry.');
+
+// Regression: DeepSeek JSON mode can return valid JSON with the wrong shape.
+try{
+ let attempts=0;
+ const valid=makeDemo('red','cards',0);
+ globalThis.fetch=async(_url,options)=>{
+  attempts++;const body=JSON.parse(options.body);
+  assert.match(body.messages[0].content,/JSON Schema/);
+  if(attempts===2){const repair=JSON.parse(body.messages[1].content);assert.ok(repair.validationIssues.length);assert.deepEqual(repair.originalInput,{story:'검증용'});}
+  return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(attempts===1?{result:valid}:valid)}}]});
+ };
+ const repaired=await deepseekJSON('test',{story:'검증용'},{key:'test'},resultSchema);
+ assert.deepEqual(JSON.parse(repaired.text),resultSchema.parse(valid));assert.equal(attempts,2);
+ attempts=0;
+ globalThis.fetch=async()=>{attempts++;return Response.json({choices:[{finish_reason:'stop',message:{content:'{"blocks":[]}'}}]});};
+ await assert.rejects(deepseekJSON('test',{}, {key:'test'},resultSchema),e=>e.status===502&&/자동 교정/.test(e.message));assert.equal(attempts,2);
+ attempts=0;
+ globalThis.fetch=async()=>{attempts++;return new Response('',{status:401});};
+ await assert.rejects(deepseekJSON('test',{}, {key:'test'},resultSchema),e=>e.status===502);assert.equal(attempts,1);
+}finally{globalThis.fetch=fetchOriginal;}
+console.log('PASS: malformed Chinese output repaired once; persistent invalid output rejected; authentication failures not retried.');
