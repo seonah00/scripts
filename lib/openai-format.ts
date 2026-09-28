@@ -4,6 +4,7 @@ import {z} from 'zod';
 export function structuredFormat(schema:z.ZodType){
  const convert=(node:z.ZodType):Record<string,unknown>=>{
   if(node instanceof z.ZodDefault)return convert(node.removeDefault());
+  if(node instanceof z.ZodEnum)return {type:'string',enum:node.options};
   if(node instanceof z.ZodString)return {type:'string',...(node.minLength!==null?{minLength:node.minLength}:{}),...(node.maxLength!==null?{maxLength:node.maxLength}:{})};
   if(node instanceof z.ZodObject){const shape=node.shape as Record<string,z.ZodType>;return {type:'object',properties:Object.fromEntries(Object.entries(shape).map(([key,item])=>[key,convert(item)])),required:Object.keys(shape),additionalProperties:false};}
   if(node instanceof z.ZodArray)return {type:'array',items:convert(node.element),...(node._def.minLength?{minItems:node._def.minLength.value}:{}),...(node._def.maxLength?{maxItems:node._def.maxLength.value}:{})};

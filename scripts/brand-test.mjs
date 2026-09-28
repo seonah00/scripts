@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {brandGuideSchema,requireBrandConfirmation} from '../lib/brand.ts';
+import {briefSchema,emptyBrief,planningContext} from '../lib/studio.ts';
+import {guideURL,publicIPv4,fileMime,htmlText} from '../lib/guide-source.ts';
+for(const ip of ['127.0.0.1','10.1.1.1','169.254.169.254','172.16.0.1','192.168.1.1','100.64.0.1','0.0.0.0','224.0.0.1','::1','::ffff:127.0.0.1'])assert.equal(publicIPv4(ip),false,ip);
+assert.equal(publicIPv4('8.8.8.8'),true);
+for(const u of ['http://example.com','https://user:pass@example.com','https://127.0.0.1','https://[::1]','https://localhost','https://foo.internal','https://example.com:8443','file:///etc/passwd'])assert.throws(()=>guideURL(u));
+assert.equal(guideURL('https://example.com/guide.pdf').hostname,'example.com');
+assert.equal(fileMime(Buffer.from('%PDF-1.7\n')),'application/pdf');assert.equal(fileMime(Buffer.from('<html>bad.pdf</html>')),null);
+assert.equal(fileMime(Buffer.from([137,80,78,71,13,10,26,10])),'image/png');
+assert.equal(htmlText('<html><head>hidden</head><script>secret()</script><p>actual &amp; guide</p></html>'),'actual & guide');
+const legacy={...emptyBrief,name:'Test'};delete legacy.brand;assert.equal(briefSchema.parse(legacy).brand.enabled,false);
+const brand=brandGuideSchema.parse({enabled:true});assert.throws(()=>requireBrandConfirmation(brand));brand.confirmed=true;assert.throws(()=>requireBrandConfirmation(brand));brand.requirements=[{id:'r1',kind:'exact',text:'#광고',source:'p1',quote:'#광고'}];requireBrandConfirmation(brand);
+const b={...emptyBrief,name:'Test',brand};const context=planningContext(b,[]);assert.notEqual(context,planningContext({...b,brand:{...brand,requirements:[{...brand.requirements[0],text:'#협찬'}]}},[]));
+console.log('Brand guide: legacy compatibility, confirmation gate, plan invalidation, URL restrictions, MIME signatures and HTML extraction passed.');

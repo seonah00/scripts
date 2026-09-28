@@ -16,5 +16,6 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:security
       - run: pnpm test:language
+      - run: node --experimental-strip-types scripts/brand-test.mjs
       - run: pnpm build
       - run: pnpm test:http
