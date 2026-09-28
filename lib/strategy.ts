@@ -1,0 +1,19 @@
+import {z} from 'zod';
+import {ask,localized} from './ai';
+import {AppError} from './server';
+import {profileSchema,accountDirectionSchema,briefSchema,factSchema,contentPlanSchema,eligibleFacts,validateItems,planningContext} from './studio';
+export const directionsOutput=z.object({directions:z.array(accountDirectionSchema).min(3).max(3)});
+export const plansOutput=z.object({plans:z.array(contentPlanSchema).min(3).max(3)});
+export async function recommendDirections(input:unknown){
+ const profile=profileSchema.parse(input);
+ if(!profile.niche.trim()||!profile.audience.trim()||!profile.strengths.trim()||!profile.goal.trim()||!profile.face.trim())throw new AppError('주제, 시청자, 경험·강점, 운영 목적, 촬영 방식을 먼저 알려주세요.');
+ const {directions:_old,direction:_selected,...answers}=profile;
+ const r=await ask('Recommend exactly THREE distinct, actionable account directions in Korean based only on the supplied questionnaire. Each must explain who the creator serves, the sustainable content angle, why it matches explicitly supplied strengths and filming constraints, 2-4 content pillars, voice, 2-3 hypothetical content ideas and things to avoid. Ideas are proposals, not claims of lived experience. Do not assign age, gender, nationality, location, expertise or professional status not supplied. Do not default to Korean older sister, beauty, female audience or Chinese audience. Do not promise virality, income or algorithm performance. Return JSON directions with name,positioning,reason,pillars,tone,examples,avoid. Distinguish the alternatives meaningfully rather than paraphrasing the same niche.',answers,false,directionsOutput);
+ return directionsOutput.parse(JSON.parse(r.text));
+}
+export async function planContent(input:unknown){
+ const {brief,facts}=z.object({brief:briefSchema,facts:z.array(factSchema).max(30)}).parse(input);validateItems(brief);
+ const confirmed=eligibleFacts(brief,facts);if(brief.mode!=='single'&&brief.items.some(i=>!confirmed.some(f=>f.itemId===i.id)))throw new AppError('모든 제품·장소의 정보를 먼저 확인해 주세요.');if(!confirmed.length)throw new AppError('기획에 사용할 정보를 먼저 확인해 주세요.');
+ const r=await localized('Create exactly THREE distinct creative packages for THIS story and creator account direction. Return JSON {plans:[{angle,reason,title,titleKorean,thumbnail,thumbnailKorean,opening,openingKorean,outline}]}. angle/reason/outline in Korean; publication fields in platform language. Title, thumbnail and opening must complement one another and promise the SAME evidenced story, not repeat a headline three times. Each package needs a genuinely different angle grounded in supplied confirmed facts: e.g. a real contrast, specific relatable moment, useful discovery, honest question. Choose based on the actual story, not fixed templates. Explain why each angle fits the selected account direction and footage. Make wording compelling through specificity and information order, not fabricated drama or vague superlatives. A question mark does not excuse a false implication. No invented first-time experiences, ages, actions, dialogue, results, rankings, popularity, sensory details or emotions. Account direction is a creative preference, NOT evidence for this story. Existing user notes are NOT facts unless in confirmedFacts. If experience is none use prospective language. Item experiences are scoped to that item. Respect format, duration and available footage. No save/follow/purchase CTA. No automatic slang. Korean meanings faithfully translate publication text. Outline is a brief proposed sequence, not invented events.',{brief,confirmedFacts:confirmed},brief.platform,plansOutput);
+ const output=plansOutput.parse(JSON.parse(r.text));return {...output,planContext:planningContext(brief,facts)};
+}

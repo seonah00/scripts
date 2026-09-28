@@ -103,3 +103,16 @@ for(const instruction of ['', '  ', 'x'.repeat(2001)])assert.equal(revisionSchem
 assert.equal(revisionSchema.safeParse({...revisionInput,structure:'unknown'}).success,false);
 assert.equal(revisionSchema.safeParse({...revisionInput,result:{title:'partial'}}).success,false);
 console.log('PASS: full revision rejects blank/oversized requests, unsupported structure modes and incomplete source drafts.');
+
+const {profileSchema,planningContext,selectedContentPlan}=await import('../lib/studio.ts');
+const legacyProfile=profileSchema.parse({name:'기존 사용자',niche:'게임',tone:'유쾌하게',audience:'게임 초보자',face:'목소리만'});
+assert.equal(legacyProfile.direction,'');assert.deepEqual(legacyProfile.directions,[]);
+const planBrief=briefSchema.parse({...emptyBrief,name:'테스트',profile:legacyProfile});
+const planFacts=[f('','manual')];const plan={angle:'발견',reason:'근거',title:'题目',titleKorean:'제목',thumbnail:'封面',thumbnailKorean:'표지',opening:'开头',openingKorean:'시작',outline:['시작','마무리']};
+planBrief.plans=[plan,plan,plan];planBrief.planContext=planningContext(planBrief,planFacts);
+assert.equal(selectedContentPlan(planBrief,planFacts,1),plan);
+assert.equal(selectedContentPlan({...planBrief,profile:{...legacyProfile,direction:'새 방향'}},planFacts,1),undefined);
+assert.equal(selectedContentPlan(planBrief,[{...planFacts[0],text:'변경된 사실'}],1),undefined);
+assert.equal(selectedContentPlan({...planBrief,length:'60초'},planFacts,1),undefined);
+assert.equal(selectedContentPlan(briefSchema.parse({...emptyBrief,name:'기존 프로젝트'}),planFacts,0),undefined);
+console.log('PASS: old profiles/projects remain readable; selected package invalidates when facts, direction or duration change.');
