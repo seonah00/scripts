@@ -59,5 +59,5 @@ export function validateReviewedResult(original:Result,next:Result){
  return next;
 }
 
-export function planningContext(brief:Brief,facts:Fact[]){const {plans:_plans,planContext:_context,...input}=brief;const text=JSON.stringify({brief:input,facts:eligibleFacts(brief,facts)});let a=2166136261,b=5381;for(let i=0;i<text.length;i++){a=Math.imul(a^text.charCodeAt(i),16777619);b=Math.imul(b,33)^text.charCodeAt(i);}return `${text.length}:${a>>>0}:${b>>>0}`;}
+export function planningContext(brief:Brief,facts:Fact[]){const {plans:_plans,planContext:_context,...input}=brief;const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,canonical(v)])):value;const text=JSON.stringify(canonical({brief:input,facts:eligibleFacts(brief,facts)}));let a=2166136261,b=5381;for(let i=0;i<text.length;i++){a=Math.imul(a^text.charCodeAt(i),16777619);b=Math.imul(b,33)^text.charCodeAt(i);}return `${text.length}:${a>>>0}:${b>>>0}`;}
 export function selectedContentPlan(brief:Brief,facts:Fact[],concept:number){return brief.planContext===planningContext(brief,facts)?brief.plans[concept]:undefined;}

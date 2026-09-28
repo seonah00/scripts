@@ -116,3 +116,7 @@ assert.equal(selectedContentPlan(planBrief,[{...planFacts[0],text:'변경된 사
 assert.equal(selectedContentPlan({...planBrief,length:'60초'},planFacts,1),undefined);
 assert.equal(selectedContentPlan(briefSchema.parse({...emptyBrief,name:'기존 프로젝트'}),planFacts,0),undefined);
 console.log('PASS: old profiles/projects remain readable; selected package invalidates when facts, direction or duration change.');
+const reorderedFacts=planFacts.map(v=>Object.fromEntries(Object.entries(v).reverse()));
+assert.equal(planningContext(planBrief,reorderedFacts),planningContext(planBrief,planFacts));
+assert.equal(selectedContentPlan(planBrief,reorderedFacts,1),plan);
+console.log('PASS: planning context is stable across client/server object-key ordering.');
