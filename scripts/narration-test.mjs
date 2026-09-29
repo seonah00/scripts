@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {briefSchema,emptyBrief,planningContext} from '../lib/studio.ts';
+import {usesKoreanVoice,narrationInstructions} from '../lib/narration.ts';
+const old={...emptyBrief,name:'test'};delete old.voiceMode;
+assert.equal(briefSchema.parse(old).voiceMode,'platform');
+const b={...old,format:'video',platform:'red',voiceMode:'korean'};
+assert.equal(usesKoreanVoice(b),true);
+assert.equal(usesKoreanVoice({...b,format:'cards'}),false);
+assert.equal(usesKoreanVoice({...b,platform:'tiktok'}),false);
+assert.notEqual(planningContext(b,[]),planningContext({...b,voiceMode:'platform'},[]));
+assert.match(narrationInstructions({brief:b}),/actual Korean spoken/);
+assert.equal(narrationInstructions({brief:{...b,platform:'tiktok'}}),'');
+console.log('Narration mode: legacy defaults, platform/format isolation and plan invalidation passed.');

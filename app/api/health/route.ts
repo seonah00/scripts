@@ -1,1 +1,1 @@
-export function GET(){return Response.json({status:'ok',version:'0.8.0'});}
+export function GET(){return Response.json({status:'ok',version:'0.8.1'});}
