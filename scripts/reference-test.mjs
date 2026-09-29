@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {briefSchema,emptyBrief,planningContext,projectSchema} from '../lib/studio.ts';
+import {resolveReferenceGuide,referenceInstructions} from '../lib/reference-guides.ts';
+const old={...emptyBrief,name:'테스트'};delete old.referenceStyle;
+assert.equal(briefSchema.parse(old).referenceStyle,'auto');
+assert.equal(resolveReferenceGuide({...old,category:'daily'}).id,'day');
+assert.equal(resolveReferenceGuide({...old,category:'place'}).id,'curation');
+assert.equal(resolveReferenceGuide({...old,referenceStyle:'none'}),null);
+assert.equal(resolveReferenceGuide({...old,referenceStyle:'review',category:'vlog'}).id,'review');
+assert.notEqual(planningContext(old,[]),planningContext({...old,referenceStyle:'travel'},[]));
+assert.equal(projectSchema.parse({id:'00000000-0000-4000-8000-000000000001',brief:old,facts:[],result:null,concept:0,demo:false,updatedAt:''}).brief.referenceStyle,'auto');
+assert.equal(referenceInstructions({},'red'),'');
+assert.match(referenceInstructions({brief:old},'tiktok'),/US English/);
+assert.match(referenceInstructions({brief:old},'red'),/Simplified Chinese/);
+assert.equal(briefSchema.safeParse({...old,referenceStyle:'unknown'}).success,false);
+console.log('Reference guide: legacy projects, selection, platform adaptation and plan invalidation passed.');

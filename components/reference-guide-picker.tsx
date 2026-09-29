@@ -1,0 +1,7 @@
+'use client';
+import {referenceGuides,resolveReferenceGuide,type ReferenceStyle} from '@/lib/reference-guides';
+import type {Brief} from '@/lib/studio';
+export function ReferenceGuidePicker({brief,disabled,onChange}:{brief:Brief;disabled:boolean;onChange:(value:ReferenceStyle)=>void}){
+ const guide=resolveReferenceGuide(brief);
+ return <section className="reference-guide" aria-labelledby="reference-heading"><div><span className="eyebrow">CREATIVE DIRECTION</span><h3 id="reference-heading">콘텐츠 구성 가이드</h3><p>레퍼런스에서 추린 이야기·화면 구성 방식을 내 계정과 촬영 조건에 맞춰 적용해요.</p></div><div className="field"><label htmlFor="reference-style">이번 콘텐츠의 구성 방식</label><select id="reference-style" disabled={disabled} value={brief.referenceStyle??'auto'} onChange={e=>onChange(e.target.value as ReferenceStyle)}><option value="auto">자동 추천 · 주제와 소개 방식 기준</option>{referenceGuides.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}<option value="none">지정 없이 내 이야기로 구성</option></select></div>{guide&&<div className="reference-preview"><strong>{brief.referenceStyle==='auto'?'자동 추천: ':''}{guide.name}</strong><p>{guide.summary}</p><dl><dt>{brief.format==='video'?'촬영·편집':'화면 구성'}</dt><dd>{brief.format==='video'?guide.visual:'장면별 핵심 정보를 카드 한 장씩 나누고, 표지에서 제시한 내용을 순서대로 풀어요.'}</dd><dt>썸네일</dt><dd>{guide.cover}</dd></dl></div>}<small>크리에이터 프로필·확인된 사실·브랜드 필수 조건을 우선해요. {brief.platform==='tiktok'?'TikTok은 미국 영어와 영상 호흡에 맞게 재구성해요.':'중국어 표현을 억지로 넣거나 레퍼런스의 개인 경험을 복제하지 않아요.'} 원본 영상 업로드·자동 분석 기능은 포함하지 않아요.</small></section>;
+}
